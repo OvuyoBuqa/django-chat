@@ -1,0 +1,119 @@
+{% extends "chat/base.html" %}
+{% load static %}
+
+{% block title %}#{{ room.name }} — Chatter{% endblock %}
+
+{% block content %}
+<div class="chat-container">
+    <div class="chat-header">
+        <h2># <span>{{ room.name }}</span></h2>
+        <a href="{% url 'chat:index' %}" class="btn btn-ghost btn-sm">All Rooms</a>
+    </div>
+
+    <div class="chat-messages" id="chat-log">
+        <div class="system-message">Welcome to #{{ room.name }}</div>
+    </div>
+
+    <div class="chat-input-area">
+        <form id="chat-form" class="chat-form">
+            {% csrf_token %}
+            <input type="text" id="chat-input" class="form-input" placeholder="Type a message..." autocomplete="off" required>
+            <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+        <div class="status-bar">
+            <span class="status-dot" id="status-dot"></span>
+            <span id="status-text">Connected</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    var roomName = "{{ room.name }}";
+    var username = "{{ user.username }}";
+    var lastMessageId = 0;
+
+    function getAvatarColor(name) {
+        var colors = ["#7c5cfc", "#3cd4a0", "#f0b429", "#f0446b", "#5c9cfc", "#c45cfc", "#fc8c5c", "#5cfcbc"];
+        var hash = 0;
+        for (var i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    }
+
+    function appendMessage(id, user, content, time) {
+        if (document.getElementById("msg-" + id)) return;
+        var log = document.getElementById("chat-log");
+        var div = document.createElement("div");
+        div.className = "message" + (user === username ? " own" : "");
+        div.id = "msg-" + id;
+
+        var avatarColor = getAvatarColor(user);
+        var initial = user.charAt(0).toUpperCase();
+
+        div.innerHTML =
+            '<div class="message-avatar" style="background:' + avatarColor + '">' + initial + '</div>' +
+            '<div class="message-body">' +
+                '<div class="message-author">' + user + '</div>' +
+                '<div class="message-text">' + escapeHtml(content) + '</div>' +
+                '<div class="message-time">' + time + '</div>' +
+            '</div>';
+
+        log.appendChild(div);
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        var d = document.createElement("div");
+        d.textContent = text;
+        return d.innerHTML;
+    }
+
+    function formatTime(iso) {
+        var d = new Date(iso);
+        return d.toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"});
+    }
+
+    async function poll() {
+        try {
+            var res = await fetch("/chat/" + roomName + "/messages/?after=" + lastMessageId);
+            var data = await res.json();
+            for (var i = 0; i < data.messages.length; i++) {
+                var m = data.messages[i];
+                appendMessage(m.id, m.username, m.content, formatTime(m.created_at));
+                lastMessageId = m.id;
+            }
+            document.getElementById("status-dot").className = "status-dot";
+            document.getElementById("status-text").textContent = "Connected";
+        } catch (e) {
+            document.getElementById("status-dot").className = "status-dot disconnected";
+            document.getElementById("status-text").textContent = "Disconnected";
+        }
+    }
+
+    setInterval(poll, 2000);
+
+    document.getElementById("chat-form").onsubmit = async function(e) {
+        e.preventDefault();
+        var input = document.getElementById("chat-input");
+        var content = input.value.trim();
+        if (!content) return;
+        try {
+            await fetch("/chat/" + roomName + "/send/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": document.querySelector("[name=csrfmiddlewaretoken]").value
+                },
+                body: JSON.stringify({content: content})
+            });
+            input.value = "";
+            await poll();
+        } catch (e) {}
+    };
+
+    poll();
+</script>
+{% endblock %}

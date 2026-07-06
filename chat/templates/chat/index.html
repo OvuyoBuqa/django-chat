@@ -1,0 +1,60 @@
+clear{% extends "chat/base.html" %}
+{% load static %}
+
+{% block title %}Rooms — Chatter{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    
+    <div class="page-header">
+        <h1>Chat Rooms</h1>
+        <p>Create a room or join an existing one to start chatting.</p>
+    </div>
+
+    <div class="card create-room-card">
+        <div class="card-header">
+            <h2 class="card-title">Create or Join a Room</h2>
+        </div>
+        <form id="room-form">
+            <div class="form-group">
+                <label class="form-label" for="room-name">Room name</label>
+                <input type="text" id="room-name" class="form-input" placeholder="e.g. general, random, project-alpha" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Enter Room</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Existing Rooms</h2>
+        </div>
+        <div class="room-grid">
+            {% for room in rooms %}
+                <a href="{% url 'chat:room' room.name %}" class="room-card">
+                    <div>
+                        <div class="room-name">#{{ room.name }}</div>
+                        <div class="room-meta">{{ room.messages.count }} message{{ room.messages.count|pluralize }}</div>
+                    </div>
+                    <span class="arrow">→</span>
+                </a>
+            {% empty %}
+                <div class="empty-state">
+                    <div class="empty-icon">💬</div>
+                    <p>No rooms yet. Create one above to get started.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById("room-form").onsubmit = function(e) {
+        e.preventDefault();
+        var name = document.getElementById("room-name").value.trim().toLowerCase().replace(/\s+/g, "-");
+        if (name) {
+            window.location.href = "{% url 'chat:index' %}" + name + "/";
+        }
+    };
+</script>
+{% endblock %}

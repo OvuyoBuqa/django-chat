@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Chat{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'chat/style.css' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <a href="{% url 'chat:index' %}" class="navbar-brand">
+            <span class="logo">C</span>
+            Chatter
+        </a>
+        <div class="navbar-actions">
+            {% if user.is_authenticated %}
+                <span class="username">{{ user.username }}</span>
+                <a href="{% url 'chat:logout' %}" class="btn btn-ghost btn-sm">Logout</a>
+            {% else %}
+                <a href="{% url 'chat:login' %}?next={{ request.path }}" class="btn btn-primary btn-sm">Login</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
